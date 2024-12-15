@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>User_Info</title>
+  <style>
+    /* General styles */
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh; /* Full viewport height */
+    }
+
+    .checkout-container {
+      width: 90%;
+      max-width: 800px;
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    h1, h2 {
+      font-family: 'Poppins', Arial, sans-serif;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+      color: #444;
+      border-bottom: 2px solid #ff6f61;
+      display: inline-block;
+      padding-bottom: 5px;
+    }
+
+    .checkout-section {
+      margin-bottom: 30px;
+    }
+
+    label {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      margin-top: 5px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #ff6f61;
+      outline: none;
+    }
+
+    textarea {
+      resize: none;
+    }
+
+    .checkout-actions {
+      text-align: center;
+    }
+
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .checkout-container {
+        width: 95%;
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      h2 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    <h1>Checkout</h1>
+
+    <!-- Billing Information -->
+    <div class="checkout-section">
+      <h2>Billing Information</h2>
+      <label for="first-name">First Name</label>
+      <input type="text" id="first-name" name="first-name" placeholder="Enter your first name" required>
+
+      <label for="last-name">Last Name</label>
+      <input type="text" id="last-name" name="last-name" placeholder="Enter your last name" required>
+
+      <label for="email">Email Address</label>
+      <input type="email" id="email" name="email" placeholder="Enter your email" required>
+
+      <label for="phone">Phone Number</label>
+      <input type="tel" id="phone" name="phone" placeholder="Enter your phone number" required>
+    </div>
+
+    <!-- Shipping Information -->
+    <div class="checkout-section">
+      <h2>Shipping Information</h2>
+      <label for="address">Shipping Address</label>
+      <textarea id="address" name="address" rows="4" placeholder="Enter your shipping address" required></textarea>
+
+      <label for="city">City</label>
+      <input type="text" id="city" name="city" placeholder="Enter your city" required>
+
+      <label for="zip-code">Zip Code</label>
+      <input type="text" id="zip-code" name="zip-code" placeholder="Enter your zip code" required>
+
+      <label for="country">Country</label>
+      <select id="country" name="country" required>
+        <option value="">Select Country</option>
+        <option value="US">United States</option>
+        <option value="CA">Canada</option>
+        <option value="PH">Philippines</option>
+      </select>
+    </div>
+
+    <div class="checkout-actions btn btn-warning">
+      <input type="submit" name="submit" id="submit" value="Confirm" >
+    </div>
+  </div>
+</body>
+</html>
+
