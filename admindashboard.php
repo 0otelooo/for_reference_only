@@ -1,146 +1,284 @@
+<?php
+session_start();
+include('database.php'); // Include the database connection file
 
-<?php 
+// Check if the admin is logged in
+if ($_SESSION['role'] !== 'admin') {
+    header("Location: login.php"); // If not logged in as admin, redirect to login page
+    exit();
+}
 
-include('db.php');
+// Fetching data for the dashboard
+// 1. Sales Today vs Yesterday
+$sql_sales_today = "SELECT SUM(i.price * o.quantity) AS total_sales_today 
+                    FROM orders o 
+                    JOIN items i ON o.item_id = i.id 
+                    WHERE DATE(o.created_at) = CURDATE() AND o.status = 'Delivered'";
+$result_sales_today = $conn->query($sql_sales_today);
+$total_sales_today = $result_sales_today->fetch_assoc()['total_sales_today'];
 
-// Fetch sales data
-$sql_today = "SELECT SUM(amount) AS total_sales FROM sales WHERE DATE(sale_date) = CURDATE()";
-$stmt_today = $pdo->query($sql_today);
-$sales_today = $stmt_today->fetch(PDO::FETCH_ASSOC)['total_sales'] ?? 0;
+$sql_sales_yesterday = "SELECT SUM(i.price * o.quantity) AS total_sales_yesterday 
+                        FROM orders o 
+                        JOIN items i ON o.item_id = i.id 
+                        WHERE DATE(o.created_at) = CURDATE() - INTERVAL 1 DAY AND o.status = 'Delivered'";
+$result_sales_yesterday = $conn->query($sql_sales_yesterday);
+$total_sales_yesterday = $result_sales_yesterday->fetch_assoc()['total_sales_yesterday'];
 
-$sql_yesterday = "SELECT SUM(amount) AS total_sales FROM sales WHERE DATE(sale_date) = CURDATE() - INTERVAL 1 DAY";
-$stmt_yesterday = $pdo->query($sql_yesterday);
-$sales_yesterday = $stmt_yesterday->fetch(PDO::FETCH_ASSOC)['total_sales'] ?? 0;
+// 2. Sales This Year vs Last Year
+$sql_sales_this_year = "SELECT SUM(i.price * o.quantity) AS total_sales_this_year 
+                        FROM orders o 
+                        JOIN items i ON o.item_id = i.id 
+                        WHERE YEAR(o.created_at) = YEAR(CURDATE()) AND o.status = 'Delivered'";
+$result_sales_this_year = $conn->query($sql_sales_this_year);
+$total_sales_this_year = $result_sales_this_year->fetch_assoc()['total_sales_this_year'];
 
-$sql_this_year = "SELECT SUM(amount) AS total_sales FROM sales WHERE YEAR(sale_date) = YEAR(CURDATE())";
-$stmt_this_year = $pdo->query($sql_this_year);
-$sales_this_year = $stmt_this_year->fetch(PDO::FETCH_ASSOC)['total_sales'] ?? 0;
+$sql_sales_last_year = "SELECT SUM(i.price * o.quantity) AS total_sales_last_year 
+                        FROM orders o 
+                        JOIN items i ON o.item_id = i.id 
+                        WHERE YEAR(o.created_at) = YEAR(CURDATE()) - 1 AND o.status = 'Delivered'";
+$result_sales_last_year = $conn->query($sql_sales_last_year);
+$total_sales_last_year = $result_sales_last_year->fetch_assoc()['total_sales_last_year'];
 
-$sql_last_year = "SELECT SUM(amount) AS total_sales FROM sales WHERE YEAR(sale_date) = YEAR(CURDATE()) - 1";
-$stmt_last_year = $pdo->query($sql_last_year);
-$sales_last_year = $stmt_last_year->fetch(PDO::FETCH_ASSOC)['total_sales'] ?? 0;
+// 3. Inventory Report (Current Stock)
+$sql_inventory = "SELECT i.name AS item_name, i.quantity
+                  FROM items i 
+                  ORDER BY i.quantity DESC";
+$result_inventory = $conn->query($sql_inventory);
 
-// Fetch items data
-$sql_inventory_value = "SELECT SUM(price * quantity) AS total_items_value FROM items"; 
-$stmt_items_value = $pdo->query($sql_inventory_value);
-$items_value = $stmt_items_value->fetch(PDO::FETCH_ASSOC)['total_items_value'] ?? 0;
+// 4. User Activity (Recent User Registrations)
+$sql_user_activity = "SELECT username, email, created_at 
+                      FROM register 
+                      ORDER BY created_at DESC LIMIT 5";
+$result_user_activity = $conn->query($sql_user_activity);
 
-$sql_items_in_stock = "SELECT SUM(quantity) AS total_items_in_stock FROM items"; 
-$stmt_items_in_stock = $pdo->query($sql_items_in_stock);
-$items_in_stock = $stmt_items_in_stock->fetch(PDO::FETCH_ASSOC)['total_items_in_stock'] ?? 0;
+// 5. Item Movement Report (Recent Orders)
+$sql_item_movement = "SELECT o.id AS order_id, i.name AS item_name, o.quantity, o.created_at 
+                      FROM orders o 
+                      JOIN items i ON o.item_id = i.id 
+                      ORDER BY o.created_at DESC LIMIT 5";
+$result_item_movement = $conn->query($sql_item_movement);
 
+// 6. Top 10 Items (Highest Selling Items)
+$sql_top_items = "SELECT i.name AS item_name, SUM(o.quantity) AS total_sold 
+                  FROM orders o 
+                  JOIN items i ON o.item_id = i.id 
+                  GROUP BY i.name 
+                  ORDER BY total_sold DESC LIMIT 10";
+$result_top_items = $conn->query($sql_top_items);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <!-- Link to Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
     <style>
         body {
-            background: linear-gradient(to right, #d3d3d3, #a9a9a9); /* Gradient from light gray to darker gray */
+            font-family: 'Poppins', sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 0;
         }
-        .dashboard-header {
-            background-color: #343a40;
-            color: white;
-            padding: 20px 0;
+
+        header {
+            background: #333;
+            color: #fff;
+            padding: 20px;
             text-align: center;
+            font-size: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 30px auto;
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
-        .card {
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
+
+        .card-body {
+            padding: 20px;
         }
-        .card:hover {
-            transform: scale(1.05);
+
+        .card-title {
+            font-size: 1.5rem;
         }
-        .report-title {
-            font-size: 1.2rem;
-            font-weight: bold;
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
         }
-        .footer {
+
+        table th, table td {
+            padding: 10px;
             text-align: center;
-            margin-top: 20px;
-            font-size: 0.9rem;
-            color: #6c757d;
         }
+
+        table th {
+            background: #333;
+            color: #fff;
+        }
+
+        .card-header {
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+        }
+
+        /* Back button style */
+        .back-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
     </style>
 </head>
 <body>
 
-<div class="dashboard-header">
-    <h1>Admin Dashboard</h1>
-</div>
+<!-- Back Button -->
+<a href="homepageadmin.php" class="btn btn-dark btn-lg back-button">← Back</a>
+
+<header>Admin Dashboard</header>
 
 <div class="container">
-    <div class="row">
-        <!-- Sales Report Section -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card p-3 mb-4">
-                <div class="report-title">Sales Today</div>
-                <div class="text-success fs-4">
-                    <?php echo "₱" . number_format($sales_today, 2); ?>
-                </div>
-            </div>
-        </div>
 
-        <div class="col-md-6 col-lg-4">
-            <div class="card p-3 mb-4">
-                <div class="report-title">Sales Yesterday</div>
-                <div class="text-primary fs-4">
-                    <?php echo "₱" . number_format($sales_yesterday, 2); ?>
+    <!-- Sales Today vs Yesterday -->
+    <div class="card">
+        <div class="card-header">Sales Today vs Yesterday</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Sales Today:</strong> $<?php echo number_format($total_sales_today, 2); ?></p>
                 </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card p-3 mb-4">
-                <div class="report-title">Sales This Year</div>
-                <div class="text-warning fs-4">
-                    <?php echo "₱" . number_format($sales_this_year, 2); ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card p-3 mb-4">
-                <div class="report-title">Sales Last Year</div>
-                <div class="text-danger fs-4">
-                    <?php echo "₱" . number_format($sales_last_year, 2); ?>
-                </div>
-            </div>
-        </div>
-
-        <!-- Inventory Section -->
-        <div class="col-md-6 col-lg-4">
-            <div class="card p-3 mb-4">
-                <div class="report-title">Total Inventory Value</div>
-                <div class="text-secondary fs-4">
-                    <?php echo "₱" . number_format($items_value, 2); ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-4">
-            <div class="card p-3 mb-4">
-                <div class="report-title">Items in Stock</div>
-                <div class="text-secondary fs-4">
-                    <?php echo number_format($items_in_stock); ?>
+                <div class="col-md-6">
+                    <p><strong>Sales Yesterday:</strong> $<?php echo number_format($total_sales_yesterday, 2); ?></p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-        &copy; <?php echo date("Y"); ?> Nyro. All rights reserved.
+    <!-- Sales This Year vs Last Year -->
+    <div class="card">
+        <div class="card-header">Sales This Year vs Last Year</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Sales This Year:</strong> $<?php echo number_format($total_sales_this_year, 2); ?></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Sales Last Year:</strong> $<?php echo number_format($total_sales_last_year, 2); ?></p>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- Inventory Report -->
+    <div class="card">
+        <div class="card-header">Inventory Report</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Stock Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($item = $result_inventory->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($item['item_name']); ?></td>
+                            <td><?php echo $item['quantity']; ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- User Activity -->
+    <div class="card">
+        <div class="card-header">Recent User Activity</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Registration Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($user = $result_user_activity->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($user['username']); ?></td>
+                            <td><?php echo htmlspecialchars($user['email']); ?></td>
+                            <td><?php echo $user['created_at']; ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Item Movement Report -->
+    <div class="card">
+        <div class="card-header">Recent Item Movement</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Item Name</th>
+                        <th>Quantity</th>
+                        <th>Order Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($movement = $result_item_movement->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo $movement['order_id']; ?></td>
+                            <td><?php echo htmlspecialchars($movement['item_name']); ?></td>
+                            <td><?php echo $movement['quantity']; ?></td>
+                            <td><?php echo $movement['created_at']; ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top 10 Items -->
+    <div class="card">
+        <div class="card-header">Top 10 Items</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Total Sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($top_item = $result_top_items->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($top_item['item_name']); ?></td>
+                            <td><?php echo $top_item['total_sold']; ?></td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 
-<!-- Link to Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/bootstrap.bundle.js"></script>
 </body>
 </html>

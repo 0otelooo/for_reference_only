@@ -1,3 +1,16 @@
+<?php
+session_start(); // Start the session to access session variables
+
+// Check if the user is logged in
+if ($_SESSION['role'] !== 'admin') {
+  header("Location: login.php"); // If not logged in as admin, redirect to login page
+  exit();
+}
+
+// If logged in, display the admin orders page
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -260,10 +273,12 @@
         <button>Search</button>
       </div>
       <div class="user-menu">  
-        <a class="orders" href="ordermanagement.php">Manage Orders</a> 
+      <span>Welcome, <?php echo isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest'; ?>!
+      </span>
+        <a class="orders" href="admin_orders.php">Manage Orders</a> 
         <a class="items" href="kristina.php">Manage Items</a>  
         <a class="dashboard" href="admindashboard.php">Admin Dashboard</a>
-        <button onclick="location.href='index.html'">Logout</button>     
+        <button onclick="location.href='logout.php'">Logout</button>     
       </div>
     </div>
   </header>

@@ -1,3 +1,14 @@
+<?php
+session_start(); // Start the session to access session variables
+
+// Check if the user is logged in
+if ($_SESSION['role'] !== 'customer') {
+  header("Location: login.php"); // If not logged in as admin, redirect to login page
+  exit();
+}
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -270,17 +281,20 @@
         <img src="logo.jpg" alt="Nyro Logo">
       </div>
       <a class="addtocart" href="addtocart.php">Order Now</a>
+      <a class="addtocart" href="order_tracking.php">My Orders</a>
+
       <div class="search-bar">
         <input type="text" placeholder="Search for products, brands, or styles...">
         <button>Search</button>
       </div>
       <div class="user-menu">
-        <span>Welcome, [Customer Name]!</span>
-        <button onclick="location.href='profile.html'">Account</button>
-        <button onclick="location.href='index.html'">Logout</button>
+      <span>Welcome, <?php echo isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest'; ?>!
+      </span>     
+         <button onclick="location.href='customerprofile.php'">Account</button>
+        <button onclick="location.href='logout.php'">Logout</button>
         <!-- Cart Button with Icon -->
         <!-- Cart Button -->
-        <a href="addtocart.php">
+        <a href="mycart.php">
         <button class="cart">
          <img src="cart.jpg" alt="Cart">
          Cart (<span id="cart-count">0</span>)
